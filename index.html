@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>TROLL QUEST — a platformer that hates you</title>
 <meta name="description" content="40 levels of trap-filled platforming. Fake floors, lying signs, a boss with a crown. Works with keyboard, touch, or gamepad.">
 <meta property="og:title" content="TROLL QUEST">
@@ -22,16 +22,23 @@
   html,body{height:100%}
   body{
     overscroll-behavior:none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
     background:var(--bg);
     color:var(--ink);
     font-family:"Courier New",ui-monospace,monospace;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    min-height:100vh;overflow:hidden;
+    min-height:100vh;min-height:100dvh;overflow:hidden;
     background-image:
       radial-gradient(circle at 20% 10%, #1a1440 0%, transparent 40%),
       radial-gradient(circle at 80% 90%, #241040 0%, transparent 40%);
   }
-  #wrap{position:relative;width:min(96vw,960px)}
+  #wrap{
+    position:relative;
+    width:min(96vw, 960px);
+    width:min(96vw, calc((100vh - 92px) * 1.7778), 960px);
+    width:min(96vw, calc((100dvh - 92px) * 1.7778), 960px);
+  }
   #hud{
     display:flex;justify-content:space-between;align-items:baseline;
     padding:6px 4px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
@@ -46,7 +53,6 @@
     background:#0b0820;
     border:3px solid #2b2158;
     border-radius:6px;
-    image-rendering:pixelated;
     box-shadow:0 0 40px rgba(60,30,120,.35), inset 0 0 80px rgba(0,0,0,.5);
   }
   #toast{
@@ -93,6 +99,11 @@
   }
   #touch{display:none !important}   /* replaced by touch zones on the canvas */
   @media (pointer:coarse){ #help{display:none} }
+  @media (max-width:700px){
+    #hud{padding:3px 2px}
+    .hbtn{width:28px;height:26px;font-size:13px;border-radius:6px}
+    .hbtns{gap:4px}
+  }
   @media (pointer:coarse) and (orientation:portrait){ #rotate{display:block} }
 </style>
 </head>
