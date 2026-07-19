@@ -386,6 +386,7 @@ cvs.addEventListener("pointerdown", e=>{
   if(gameWon){ gameWon = false; loadLevel(levelIdx); return; }
 
   // ---- gameplay touch zones ----
+  if(level.boomerang && ty < H*0.5){ throwBoomerang(); return; }
   if(tx < W*0.5){
     if(touchCtl.moveId === null){
       touchCtl.moveId = e.pointerId;
@@ -498,12 +499,14 @@ function pollGamepad(){
     if(SELECT) restartLevel(true);
     if(X){ selecting = true; selIdx = levelIdx; }
     if(Y) toggleSound();
+    if(B && level && level.boomerang) throwBoomerang();
   }
 
   // gameplay movement
   gp.left  = ax < -DEAD || now[14];
   gp.right = ax >  DEAD || now[15];
-  gp.jump  = now[0] || now[1] || now[12] || (ay < -0.6);
+  const bIsJump = !(level && level.boomerang);   // B becomes the boomerang on boss levels
+  gp.jump  = now[0] || (bIsJump && now[1]) || now[12] || (ay < -0.6);
 
   gp.prevButtons = now;
   gp.prevAx = ax; gp.prevAy = ay;
@@ -526,6 +529,13 @@ const P = {
 };
 
 let echoRec = [], echoPath = null, echoT = 0;
+let brng = null;   // the one active boomerang
+
+function throwBoomerang(){
+  if(!level || !level.boomerang || brng || P.dead || paused || selecting || atTitle || gameWon) return;
+  brng = {x: P.x + P.w/2, y: P.y + P.h/2 - 2, vx: P.face * 9.5, state:'out', hit:false, t:0};
+  sfx(500, 900, 0.12, "square", 0.07);
+}
 
 // ---------- visual themes (per level, mobile-friendly: prerendered) ----------
 const THEMES = {
@@ -1142,8 +1152,8 @@ const LEVELS = [
   spawn:{x:40,y:440},
   objs:[
     S(0,500,960,40,{t:'solid'}),
-    S(260,480,70,20,{t:'spikes'}),
-    S(700,480,70,20,{t:'spikes'}),
+    S(180,480,70,20,{t:'spikes'}),
+    S(560,480,70,20,{t:'spikes'}),
     S(120,400,10,100,{t:'sign', msg:"Your twin is fragile. And far away."}),
     S(905,430,26,70,{t:'flag', hops:[{x:60,y:430}]}),
   ],
@@ -1170,7 +1180,7 @@ const LEVELS = [
   spawn:{x:40,y:440},
   objs:[
     S(0,500,960,40,{t:'solid'}),
-    S(930,458,24,16,{t:'turret', dir:-1, interval:80, phase:0}),
+    S(930,470,24,16,{t:'turret', dir:-1, interval:80, phase:0}),
     S(930,396,24,16,{t:'turret', dir:-1, interval:80, phase:40}),
     S(0,300,24,16,{t:'turret', dir:1, interval:110, phase:20}),
     S(450,420,90,16,{t:'solid'}),
@@ -1391,20 +1401,24 @@ const LEVELS = [
     S(915,430,26,70,{t:'flag', hops:[]}),
   ],
 },
-{ // 40 — THE TROLL KING (boss fight)
-  name:"THE TROLL KING",
-  intro:"THE TROLL KING. Stomp his crown three times. Try not to be royalty food.",
+{ // 40 — THE WORLD FLIPPED (everything renders upside down)
+  name:"THE WORLD FLIPPED",
+  intro:"The world is upside down. The trolls are right side up.",
+  flipud:true,
   spawn:{x:40,y:440},
   objs:[
-    S(0,500,960,40,{t:'solid'}),
-    S(150,410,90,14,{t:'solid'}),
-    S(620,410,90,14,{t:'solid'}),
-    S(700,200,60,56,{t:'boss', hp:3}),
-    S(880,330,26,170,{t:'door'}),
-    S(250,480,40,20,{t:'popspike', trig:{x:190,y:380,w:90,h:120}}),
-    S(560,480,40,20,{t:'popspike', trig:{x:500,y:380,w:90,h:120}}),
-    S(120,400,10,100,{t:'sign', msg:"The king demands tribute. Pay in stomps."}),
-    S(912,430,26,70,{t:'flag', hops:[]}),
+    S(0,500,280,40,{t:'solid'}),
+    S(280,500,110,40,{t:'fake'}),
+    S(390,500,230,40,{t:'solid'}),
+    S(620,516,110,24,{t:'spikes'}),
+    S(730,500,230,40,{t:'solid'}),
+    S(300,420,70,14,{t:'crumble'}),
+    S(500,480,40,20,{t:'popspike', trig:{x:440,y:380,w:100,h:120}}),
+    S(650,384,42,30,{t:'ghost'}),
+    S(800,430,26,70,{t:'fakeflag'}),
+    S(860,396,100,14,{t:'solid'}),
+    S(120,400,10,100,{t:'sign', msg:"Nothing is wrong. You are wrong."}),
+    S(900,326,26,70,{t:'flag', hops:[{x:320,y:400},{x:60,y:430}]}),
   ],
 },
 { // 41 — GRAVITY WELL (magnetic pull points)
@@ -1455,11 +1469,11 @@ const LEVELS = [
     S(300,360,60,20,{t:'spikes'}),
     S(430,486,60,14,{t:'booster', bvx:9.5}),
     S(600,340,80,20,{t:'spikes'}),
-    S(750,486,60,14,{t:'booster', bvx:10}),
+    S(800,486,60,14,{t:'booster', bvx:10}),
     S(915,430,26,70,{t:'fakeflag'}),
-    S(830,360,100,14,{t:'solid'}),
+    S(820,400,110,14,{t:'solid'}),
     S(80,400,10,100,{t:'sign', msg:"Hold nothing. The lane provides."}),
-    S(865,290,26,70,{t:'flag', hops:[]}),
+    S(860,330,26,70,{t:'flag', hops:[]}),
   ],
 },
 { // 44 — FOLLOW THE LIGHT (patrolling lantern in the dark)
@@ -1556,41 +1570,37 @@ const LEVELS = [
   intro:"The walls bounce you back HARDER. Momentum is a suggestion.",
   spawn:{x:40,y:440},
   objs:[
-    S(0,300,20,200,{t:'rubber'}),
+    S(0,380,20,120,{t:'rubber'}),
     S(0,500,140,40,{t:'solid'}),
     S(140,516,160,24,{t:'spikes'}),
-    S(300,400,26,100,{t:'rubber'}),
-    S(326,500,120,40,{t:'solid'}),
+    S(215,430,26,70,{t:'rubber'}),
+    S(300,500,146,40,{t:'solid'}),
     S(446,516,160,24,{t:'spikes'}),
-    S(606,400,26,100,{t:'rubber'}),
-    S(632,500,120,40,{t:'solid'}),
-    S(752,516,100,24,{t:'spikes'}),
-    S(852,500,108,40,{t:'solid'}),
+    S(520,430,26,70,{t:'rubber'}),
+    S(606,500,196,40,{t:'solid'}),
+    S(802,516,70,24,{t:'spikes'}),
+    S(872,500,88,40,{t:'solid'}),
     S(700,430,26,70,{t:'fakeflag'}),
     S(60,400,10,100,{t:'sign', msg:"Momentum is a suggestion."}),
     S(908,430,26,70,{t:'flag', hops:[]}),
   ],
 },
-{ // 50 — THE WORLD FLIPPED (everything renders upside down)
-  name:"THE WORLD FLIPPED",
-  intro:"LEVEL 50. The world is upside down. The trolls are right side up.",
-  flipud:true,
+{ // 50 — THE TROLL KING (final boss)
+  name:"THE TROLL KING",
+  intro:"THE FINAL LEVEL. Stomp his crown three times. Try not to be royalty food.",
   spawn:{x:40,y:440},
   objs:[
-    S(0,500,280,40,{t:'solid'}),
-    S(280,500,110,40,{t:'fake'}),
-    S(390,500,230,40,{t:'solid'}),
-    S(620,516,110,24,{t:'spikes'}),
-    S(730,500,230,40,{t:'solid'}),
-    S(300,420,70,14,{t:'crumble'}),
-    S(500,480,40,20,{t:'popspike', trig:{x:440,y:380,w:100,h:120}}),
-    S(650,384,42,30,{t:'ghost'}),
-    S(800,430,26,70,{t:'fakeflag'}),
-    S(860,396,100,14,{t:'solid'}),
-    S(120,400,10,100,{t:'sign', msg:"Nothing is wrong. You are wrong."}),
-    S(900,326,26,70,{t:'flag', hops:[{x:320,y:400},{x:60,y:430}]}),
+    S(0,500,960,40,{t:'solid'}),
+    S(150,410,90,14,{t:'solid'}),
+    S(620,410,90,14,{t:'solid'}),
+    S(700,200,60,56,{t:'boss', hp:3}),
+    S(880,330,26,170,{t:'door'}),
+    S(250,480,40,20,{t:'popspike', trig:{x:190,y:380,w:90,h:120}}),
+    S(560,480,40,20,{t:'popspike', trig:{x:500,y:380,w:90,h:120}}),
+    S(120,400,10,100,{t:'sign', msg:"The king demands tribute. Pay in stomps."}),
+    S(912,430,26,70,{t:'flag', hops:[]}),
   ],
-},
+}
 ];
 
 let levelIdx = 0;
@@ -1656,6 +1666,7 @@ function loadLevel(i){
     walljump: !!src.walljump,
     echo: !!src.echo,
     flipud: !!src.flipud,
+    boomerang: !!src.boomerang,
     checkpoint: null,
     chan: {},
     lantern: null,
@@ -1685,6 +1696,7 @@ function loadLevel(i){
   bullets = [];
   waves = [];
   echoRec = []; echoPath = null; echoT = 0;
+  brng = null;
   level.theme = themeFor(src, i);
   buildBackdrop();
   bannerT = 95; bannerText = "LEVEL " + (i+1) + " — " + src.name;
@@ -1705,7 +1717,8 @@ function respawn(){
   P.boostT = 0;
   levelTime = 0;
   waves = [];
-  echoRec = []; echoT = 0;   // brief visibility grace on invisible levels
+  echoRec = []; echoT = 0;
+  brng = null;   // brief visibility grace on invisible levels
   bullets = [];
   toggleOn = true;
   setSize('normal');
@@ -1724,7 +1737,8 @@ function respawn(){
     if(o.t==='lantern'){ o.x = o.hx; o.st.dir = 1; }
     if(o.t==='boss' && !o.st.deadB){
       o.st.bx = o.hx; o.st.by = o.hy; o.st.bvx = 0; o.st.bvy = 0;
-      o.st.hp = o.hp || 3; o.st.hurtT = 0; o.st.rest = 50;
+      if(!o.persist) o.st.hp = o.hp || 3;   // the rematch king remembers his wounds
+      o.st.hurtT = 0; o.st.rest = 50;
       o.st.crouch = 0; o.st.slam = false; o.st.lastWasSlam = false;
     }
     // ghost stays seen, fakeflag exploded, fakespikes revealed, key stays caught — small mercies
@@ -1934,7 +1948,8 @@ function step(){
       else if(P.vx<0){ P.x = r.x + r.w; P.wallDir = -1; }
       if(o.t==='rubber' && Math.abs(v0) > 0.5){
         P.vx = -Math.sign(v0) * clamp(Math.abs(v0)*1.35, 5, 12);
-        P.boostT = 0;
+        P.boostT = 14;          // ricochet carries — briefly uncontrollable, like real pinball
+        P.boostVx = P.vx;
         shake = Math.max(shake, 3);
         sfx(200, 500, 0.1, "square", 0.06);
       } else {
@@ -2200,7 +2215,7 @@ function step(){
               life:14+Math.random()*10, c:"rgba(200,190,230,0.7)", s:3
             });
             // phase 2+: landings send out ground shockwaves
-            if(s.hp <= 2){
+            if(s.hp <= (o.hp||3) * 0.67){
               const spd2 = s.slam ? 5.6 : 4.2;
               const h2 = s.slam ? 22 : 14;
               waves.push({x:s.bx+8,  dir:-1, spd:spd2, h:h2, life:90});
@@ -2220,15 +2235,16 @@ function step(){
           } else if(s.rest > 0){
             s.rest--;
           } else {
-            s.rest = 46 - (3 - s.hp) * 8;
+            const mhp = o.hp || 3;
+            s.rest = Math.max(14, 46 - Math.round((mhp - s.hp) / mhp * 26));
             // phase 3 (1 hp left): every other attack is the big slam
-            if(s.hp === 1 && !s.lastWasSlam){
+            if(s.hp <= (o.hp||3) * 0.34 && !s.lastWasSlam){
               s.crouch = 34;
               s.lastWasSlam = true;
             } else {
               s.lastWasSlam = false;
               s.bvy = -9.5;
-              s.bvx = (P.x + P.w/2 > s.bx + 30 ? 1 : -1) * (2.4 + (3 - s.hp) * 0.7);
+              s.bvx = (P.x + P.w/2 > s.bx + 30 ? 1 : -1) * (2.4 + ((o.hp||3) - s.hp) / (o.hp||3) * 2.2);
             }
           }
         } else if(s.slam){
@@ -2244,24 +2260,10 @@ function step(){
             P.vy = -9.5; shake = 10;
             sfx(500, 150, 0.2, "square", 0.1);
             if(s.hp <= 0){
-              s.deadB = true;
-              for(const d2 of level.objs) if(d2.t==='door') d2.st.open = true;
-              toast("The king has fallen. The cage opens.", false, 2500);
-              sfx(400, 40, 0.6, "sawtooth", 0.12);
-              // the crown goes flying
-              for(let i=0;i<3;i++) particles.push({
-                x:s.bx+16+i*16, y:s.by-8,
-                vx:(Math.random()-0.5)*6, vy:-7-Math.random()*3,
-                life:80, c:"#ffd23f", s:7
-              });
-              for(let i=0;i<40;i++) particles.push({
-                x:s.bx+30, y:s.by+28,
-                vx:(Math.random()-0.5)*10, vy:(Math.random()-0.9)*10,
-                life:50+Math.random()*30, c:rnd(["#7cff4f","#ffd23f","#ff3d6e"]), s:4+Math.random()*4
-              });
+              slayBoss(o);
             } else {
               sfx(140, 60, 0.3, "sawtooth", 0.11);   // wounded roar
-              toast(s.hp===2 ? "Ow. RUDE. Feel my SHOCKWAVES." : "ONE LEFT?! Time to get SERIOUS.", true, 1700);
+              toast(rnd(["Ow. RUDE.","The crown STAYS.","You dare?!","Feel my SHOCKWAVES.","Time to get SERIOUS."]), true, 1500);
             }
           } else if(s.hurtT <= 0){
             die("Royally flattened.");
@@ -2381,6 +2383,26 @@ function step(){
         break;
     }
   }
+
+  updateHazards(pb);
+}
+
+function slayBoss(o){
+  const s = o.st;
+  s.deadB = true;
+  for(const d2 of level.objs) if(d2.t==='door') d2.st.open = true;
+  toast("The king has fallen. The cage opens.", false, 2500);
+  sfx(400, 40, 0.6, "sawtooth", 0.12);
+  for(let i=0;i<3;i++) particles.push({
+    x:s.bx+16+i*16, y:s.by-8,
+    vx:(Math.random()-0.5)*6, vy:-7-Math.random()*3,
+    life:80, c:"#ffd23f", s:7
+  });
+  for(let i=0;i<40;i++) particles.push({
+    x:s.bx+30, y:s.by+28,
+    vx:(Math.random()-0.5)*10, vy:(Math.random()-0.9)*10,
+    life:50+Math.random()*30, c:rnd(["#7cff4f","#ffd23f","#ff3d6e"]), s:4+Math.random()*4
+  });
 }
 
 function updateHazards(pb){
@@ -2400,6 +2422,39 @@ function updateHazards(pb){
     if(overlap({x:wv.x, y:500-wv.h, w:18, h:wv.h}, pb)){
       waves.splice(i,1);
       die("Wave checked. Fatally.");
+    }
+  }
+
+  // boomerang flight
+  if(brng){
+    const b = brng;
+    b.t++;
+    if(b.state === 'out'){
+      b.x += b.vx;                       // constant speed, ~340px range
+      if(b.t > 36 || b.x < 6 || b.x > W-6) b.state = 'back';
+    } else {
+      const dx = (P.x+P.w/2) - b.x, dy = (P.y+P.h/2) - b.y;
+      const d = Math.hypot(dx,dy) || 1;
+      const sp = Math.min(11, 3.5 + b.t * 0.06);
+      b.x += dx/d * sp;
+      b.y += dy/d * sp;
+      if(d < 20){ brng = null; sfx(700, 1000, 0.06, "square", 0.05); }
+    }
+    if(brng && !b.hit){
+      for(const o of level.objs){
+        if(o.t !== 'boss' || o.st.deadB) continue;
+        const s = o.st;
+        if(s.hurtT <= 0 && overlap({x:b.x-10, y:b.y-6, w:20, h:12}, {x:s.bx, y:s.by, w:60, h:56})){
+          b.hit = true;
+          b.state = 'back';
+          s.hp = Math.floor(s.hp / 2);
+          s.hurtT = 50;
+          shake = Math.max(shake, 8);
+          sfx(900, 300, 0.18, "square", 0.1);
+          if(s.hp <= 0) slayBoss(o);
+          else toast(rnd(["HALVED. He felt that.","Boomerang math is brutal.","The crown wobbles."]), false, 1300);
+        }
+      }
     }
   }
 
@@ -2999,11 +3054,11 @@ function drawObj(o){
       ctx.strokeRect(W/2-140, 34, 280, 34);
       ctx.fillStyle = "#ffd23f";
       ctx.font = "bold 12px monospace";
-      ctx.fillText("👑 THE TROLL KING", W/2, 47);
-      for(let h2=0; h2<3; h2++){
-        ctx.fillStyle = h2 < s.hp ? "#ff3d6e" : "#2a2450";
-        ctx.fillRect(W/2-130 + h2*88, 52, 82, 10);
-      }
+      ctx.fillText("👑 " + (o.title || "THE TROLL KING") + "  " + s.hp + "/" + (o.hp||3), W/2, 47);
+      ctx.fillStyle = "#2a2450";
+      ctx.fillRect(W/2-130, 52, 260, 10);
+      ctx.fillStyle = "#ff3d6e";
+      ctx.fillRect(W/2-130, 52, 260 * (s.hp/(o.hp||3)), 10);
       ctx.textAlign = "left";
       ctx.restore();
 
@@ -3380,6 +3435,19 @@ function render(){
     ctx.beginPath();
     ctx.moveTo(b.x, b.y+3); ctx.lineTo(b.x+6, b.y); ctx.lineTo(b.x+12, b.y+3); ctx.lineTo(b.x+6, b.y+6);
     ctx.closePath(); ctx.fill();
+  }
+
+  // boomerang
+  if(brng){
+    ctx.save();
+    ctx.translate(brng.x, brng.y);
+    ctx.rotate(frame * 0.45);
+    ctx.fillStyle = "#c8a050";
+    ctx.fillRect(-11, -3, 22, 6);
+    ctx.fillRect(-3, -11, 6, 22);
+    ctx.fillStyle = "#8a6a30";
+    ctx.fillRect(-3, -3, 6, 6);
+    ctx.restore();
   }
 
   // boss shockwaves
