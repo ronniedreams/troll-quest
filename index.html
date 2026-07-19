@@ -97,7 +97,21 @@
     padding:8px;font-weight:bold;letter-spacing:1px;font-size:13px;
     border-top:2px solid #3a2d78;
   }
-  #touch{display:none !important}   /* replaced by touch zones on the canvas */
+  #touch{display:none !important}   /* legacy row; replaced by overlay buttons */
+  .ovbtn{
+    display:none;position:absolute;bottom:12px;z-index:8;
+    width:60px;height:60px;border-radius:50%;
+    background:rgba(23,18,48,0.5);border:2px solid rgba(90,72,184,0.55);
+    color:rgba(232,228,255,0.85);font-size:24px;font-weight:bold;
+    align-items:center;justify-content:center;
+    touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  .ovbtn:active{background:rgba(58,45,120,0.7)}
+  #padL{left:12px}
+  #padR{left:86px}
+  #padJ{right:12px}
+  .ovjump{width:72px;height:72px;font-size:30px;color:rgba(124,255,79,0.9);border-color:rgba(124,255,79,0.4)}
+  @media (pointer:coarse){ .ovbtn{display:flex} }
   @media (pointer:coarse){ #help{display:none} }
   @media (max-width:700px){
     #hud{padding:3px 2px}
@@ -122,6 +136,9 @@
   </div>
   <canvas id="game" width="960" height="540"></canvas>
   <div id="toast"></div>
+  <div id="padL" class="ovbtn">◀</div>
+  <div id="padR" class="ovbtn">▶</div>
+  <div id="padJ" class="ovbtn ovjump">⤒</div>
 </div>
 <div id="help">← → / A D to move &nbsp;·&nbsp; ↑ / W / SPACE to jump &nbsp;·&nbsp; R restart &nbsp;·&nbsp; P pause &nbsp;·&nbsp; L levels &nbsp;·&nbsp; M mute &nbsp;·&nbsp; 🎮 Ⓐ jump · Ⓧ levels · Ⓨ mute · START pause · SELECT restart</div>
 <div id="rotate">↻ Rotate your phone — Troll Quest is best in landscape</div>
@@ -351,6 +368,7 @@ function bindBtn(id, key){
   el.addEventListener("pointercancel",off);
 }
 bindBtn("btnL","arrowleft"); bindBtn("btnR","arrowright"); bindBtn("btnJ"," ");
+bindBtn("padL","arrowleft"); bindBtn("padR","arrowright"); bindBtn("padJ"," ");
 
 // HUD buttons (mouse + touch)
 document.getElementById("hbPause").addEventListener("click", e=>{ e.preventDefault(); ensureAudio(); pauseToggle(); });
@@ -3601,34 +3619,6 @@ function render(){
     ctx.textAlign = "left";
     ctx.restore();
     bannerT--;
-  }
-
-  // touch-control hints, fading out over the first ~2.5s of each level
-  if(isCoarse && !atTitle && !selecting && !paused && !gameWon && levelTime < 150){
-    const a = clamp(1 - levelTime/150, 0, 1) * 0.45;
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.fillStyle = "#171230";
-    ctx.strokeStyle = "#5a48b8"; ctx.lineWidth = 2;
-    ctx.font = "bold 26px monospace";
-    // steer zone
-    ctx.beginPath(); ctx.arc(W*0.13, H-72, 34, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(W*0.34, H-72, 34, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#e8e4ff";
-    ctx.textAlign = "center";
-    ctx.fillText("◀", W*0.13, H-63);
-    ctx.fillText("▶", W*0.34, H-63);
-    // jump zone
-    ctx.fillStyle = "#171230";
-    ctx.beginPath(); ctx.arc(W*0.80, H-72, 42, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#7cff4f";
-    ctx.fillText("⤒", W*0.80, H-66);
-    ctx.font = "bold 12px monospace";
-    ctx.fillStyle = "#8a83b8";
-    ctx.fillText("hold left side: steer", W*0.235, H-24);
-    ctx.fillText("hold right side: jump", W*0.80, H-24);
-    ctx.textAlign = "left";
-    ctx.restore();
   }
 
   drawTrollFace();
